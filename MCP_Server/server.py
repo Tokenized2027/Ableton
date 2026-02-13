@@ -651,6 +651,79 @@ def load_drum_kit(ctx: Context, track_index: int, rack_uri: str, kit_path: str) 
         logger.error(f"Error loading drum kit: {str(e)}")
         return f"Error loading drum kit: {str(e)}"
 
+# ============================================================================
+# Flyin' Colors Custom Commands Extension
+# ============================================================================
+
+from flyin_colors.template_commands import create_flyin_colors_session as _fc_create_session
+
+@mcp.tool()
+def create_flyin_colors_session(
+    ctx: Context,
+    bpm: int = 148,
+    key: str = "Dm",
+    track_name: str = "FC_Track_01",
+    section_type: str = "full"
+) -> str:
+    """
+    Create a complete Flyin' Colors session template with standard track layout.
+
+    This command creates a full Ableton session with:
+    - 11 tracks (full mode) or fewer (minimal/jam modes)
+    - 4 return tracks (reverb short/long, delay, distortion)
+    - Session tempo set to specified BPM
+    - Locator at bar 1 with track metadata
+
+    Parameters:
+    - bpm: Tempo in BPM (default: 148, Flyin' Colors standard)
+    - key: Musical key for the track (default: "Dm")
+    - track_name: Name for this production (default: "FC_Track_01")
+    - section_type: Track template type - "full" (all 11 tracks),
+                    "minimal" (kick+bass+lead), or "jam" (bass+drums)
+
+    Track Layout (full mode):
+    1. FC_Kick (MIDI)
+    2. FC_Hats (MIDI)
+    3. FC_Perc (MIDI)
+    4. FC_Sub (MIDI - sub bass)
+    5. FC_RollingBass (MIDI - signature rolling bass)
+    6. FC_Lead (MIDI)
+    7. FC_Pad (MIDI)
+    8. FC_Arp (MIDI)
+    9. FC_FX (Audio - for risers, impacts)
+    10. FC_Vocal (Audio - for Hebrew samples, vocal textures)
+    11. FC_Reference (Audio - muted, for A/B comparison)
+
+    Return Tracks:
+    A. FC_Reverb_Short (0.8s decay)
+    B. FC_Reverb_Long (3.5s decay)
+    C. FC_Delay (ping-pong, 1/8 note)
+    D. FC_Distortion (saturator, medium drive)
+
+    Example:
+    create_flyin_colors_session(bpm=148, key="Dm", track_name="FC_HorrorToTriumph_01")
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = _fc_create_session(
+            ableton_connection=ableton,
+            bpm=bpm,
+            key=key,
+            track_name=track_name,
+            section_type=section_type
+        )
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error creating Flyin' Colors session: {str(e)}")
+        return json.dumps({
+            "status": "error",
+            "message": f"Error creating Flyin' Colors session: {str(e)}"
+        }, indent=2)
+
+# ============================================================================
+# End Flyin' Colors Extension
+# ============================================================================
+
 # Main execution
 def main():
     """Run the MCP server"""
