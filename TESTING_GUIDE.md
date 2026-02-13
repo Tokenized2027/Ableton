@@ -280,4 +280,7 @@ Generate a rolling bass on track 5, 16 bars, key Dm
 
 ---
 
-**Test completed? Celebrate! You just automated 40+ minutes of manual work per session.** 🎯
+**Test completed? Celebrate!** 🎯
+
+**Current automation:** ~5-10 min saved per session (Commands 1-2)
+**Future potential:** 35-40 min saved per session (when Commands 3-12 are implemented)

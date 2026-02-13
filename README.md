@@ -32,7 +32,7 @@ Extends `ahujasid/ableton-mcp` with **12 custom commands** for Flyin' Colors pro
 5. **Restart** Ableton + Claude Desktop
 6. **Test:** "Create a Flyin' Colors session at 148 BPM"
 
-[Full setup guide](INSTALL_MCP_NOW.md)
+[Full setup guide](flyin-colors-architecture/technical/ABLETON_MCP_SETUP.md)
 
 ---
 
@@ -54,19 +54,24 @@ Generate a rolling bass on track 5, key Dm, 4 bars, progression i-bVI-bVII-i
 
 ## Time Savings
 
-- **Before:** 30-40 min manual setup per session
-- **After:** 15 seconds automated
-- **Savings:** 35-40 min per session, 5-7 hours across 10 tracks
+**Current (Commands 1-2 implemented):**
+- **Command 1:** Creates 11 tracks + 4 sends in 15 seconds (saves ~3-5 min)
+- **Command 2:** Generates bass patterns in 5 seconds (saves ~2-3 min per pattern)
+- **Total current savings:** ~5-10 min per session
+
+**Future (Commands 3-12 fully implemented):**
+- Full session setup including instruments, routing, mixing chains
+- **Projected savings:** 35-40 min per session, 5-7 hours across 10 tracks
 
 ---
 
 ## Documentation
 
-- [Quick Start Checklist](../QUICK_START_CHECKLIST.md) - 4-6 hour production setup
 - [Testing Guide](TESTING_GUIDE.md) - Test all commands
-- [Installation Guide](INSTALL_MCP_NOW.md) - Setup instructions
-- [Architecture](flyin-colors-architecture/) - Complete production system
+- [Setup Guide](flyin-colors-architecture/technical/ABLETON_MCP_SETUP.md) - Installation instructions
 - [MCP Commands Spec](flyin-colors-architecture/technical/MCP_CUSTOM_COMMANDS.md) - All 12 commands
+- [Architecture](flyin-colors-architecture/) - Complete production system
+- [Quick Start Checklist](../QUICK_START_CHECKLIST.md) - Full production setup (4-6 hours)
 
 ---
 
