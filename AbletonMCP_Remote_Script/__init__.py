@@ -226,10 +226,11 @@ class AbletonMCP(ControlSurface):
                 track_index = params.get("track_index", 0)
                 response["result"] = self._get_track_info(track_index)
             # Commands that modify Live's state should be scheduled on the main thread
-            elif command_type in ["create_midi_track", "set_track_name", 
-                                 "create_clip", "add_notes_to_clip", "set_clip_name", 
+            elif command_type in ["create_midi_track", "create_audio_track", "set_track_name",
+                                 "create_clip", "add_notes_to_clip", "set_clip_name",
                                  "set_tempo", "fire_clip", "stop_clip",
-                                 "start_playback", "stop_playback", "load_browser_item"]:
+                                 "start_playback", "stop_playback", "load_browser_item",
+                                 "create_return_track", "create_locator", "set_track_muted"]:
                 # Use a thread-safe approach with a response queue
                 response_queue = queue.Queue()
                 
@@ -282,7 +283,21 @@ class AbletonMCP(ControlSurface):
                             track_index = params.get("track_index", 0)
                             item_uri = params.get("item_uri", "")
                             result = self._load_browser_item(track_index, item_uri)
-                        
+                        elif command_type == "create_audio_track":
+                            index = params.get("index", -1)
+                            result = self._create_audio_track(index)
+                        elif command_type == "create_return_track":
+                            name = params.get("name", "Return")
+                            result = self._create_return_track(name)
+                        elif command_type == "create_locator":
+                            bar = params.get("bar", 1)
+                            label = params.get("label", "")
+                            result = self._create_locator(bar, label)
+                        elif command_type == "set_track_muted":
+                            track_index = params.get("track_index", 0)
+                            muted = params.get("muted", True)
+                            result = self._set_track_muted(track_index, muted)
+
                         # Put the result in the queue
                         response_queue.put({"status": "success", "result": result})
                     except Exception as e:
@@ -1055,8 +1070,102 @@ class AbletonMCP(ControlSurface):
             
             self.log_message("Retrieved {0} items at path: {1}".format(len(items), path))
             return result
-            
+
         except Exception as e:
             self.log_message("Error getting browser items at path: {0}".format(str(e)))
             self.log_message(traceback.format_exc())
+            raise
+
+    # ============================================================================
+    # Flyin' Colors Extension - Additional Commands
+    # ============================================================================
+
+    def _create_audio_track(self, index):
+        """Create a new audio track at the specified index"""
+        try:
+            # Create the track
+            self._song.create_audio_track(index)
+
+            # Get the new track
+            new_track_index = len(self._song.tracks) - 1 if index == -1 else index
+            new_track = self._song.tracks[new_track_index]
+
+            result = {
+                "track_index": new_track_index,
+                "name": str(new_track.name),
+                "type": "audio"
+            }
+
+            self.log_message("Created audio track: " + str(new_track.name))
+            return result
+        except Exception as e:
+            self.log_message("Error creating audio track: " + str(e))
+            raise
+
+    def _create_return_track(self, name):
+        """Create a new return track with the specified name"""
+        try:
+            # Create return track
+            self._song.create_return_track()
+
+            # Get the new return track (last one in the list)
+            new_return_index = len(self._song.return_tracks) - 1
+            new_return = self._song.return_tracks[new_return_index]
+
+            # Set the name
+            new_return.name = name
+
+            result = {
+                "return_track_index": new_return_index,
+                "name": str(new_return.name)
+            }
+
+            self.log_message("Created return track: " + name)
+            return result
+        except Exception as e:
+            self.log_message("Error creating return track: " + str(e))
+            raise
+
+    def _create_locator(self, bar, label):
+        """Create a locator (cue point) at the specified bar position"""
+        try:
+            # Convert bar number to beat time (bars are 1-indexed, beat time is 0-indexed)
+            # Assuming 4/4 time signature
+            beat_time = (bar - 1) * 4.0
+
+            # Create the locator
+            self._song.create_cue(beat_time, label)
+
+            result = {
+                "bar": bar,
+                "beat_time": beat_time,
+                "label": label
+            }
+
+            self.log_message("Created locator at bar {0}: {1}".format(bar, label))
+            return result
+        except Exception as e:
+            self.log_message("Error creating locator: " + str(e))
+            raise
+
+    def _set_track_muted(self, track_index, muted):
+        """Set the mute state of a track"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index {0} out of range".format(track_index))
+
+            track = self._song.tracks[track_index]
+            track.mute = muted
+
+            result = {
+                "track_index": track_index,
+                "track_name": str(track.name),
+                "muted": muted
+            }
+
+            mute_status = "muted" if muted else "unmuted"
+            self.log_message("Track {0} {1}".format(track.name, mute_status))
+            return result
+        except Exception as e:
+            self.log_message("Error setting track mute state: " + str(e))
             raise
