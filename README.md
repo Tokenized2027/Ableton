@@ -1,177 +1,265 @@
-# AbletonMCP - Ableton Live Model Context Protocol Integration
-[![smithery badge](https://smithery.ai/badge/@ahujasid/ableton-mcp)](https://smithery.ai/server/@ahujasid/ableton-mcp)
+# GoAI — Flyin' Colors Production System
 
-AbletonMCP connects Ableton Live to Claude AI through the Model Context Protocol (MCP), allowing Claude to directly interact with and control Ableton Live. This integration enables prompt-assisted music production, track creation, and Live session manipulation.
+**What:** Complete AI-assisted music production architecture for creating trauma-based Trance music
+**Who:** Avi (non-developer, vibe coder) + Claude (co-creator AI)
+**Why:** Transform October 7th trauma into defiant, triumphant music using semi-automated production workflow
 
-### Join the Community
+---
 
-Give feedback, get inspired, and build on top of the MCP: [Discord](https://discord.gg/3ZrMyGKnaU). Made by [Siddharth](https://x.com/sidahuj)
+## Quick Navigation
 
-## Features
+**New here? Start with:**
+1. [QUICK_START_CHECKLIST.md](QUICK_START_CHECKLIST.md) — Get from zero to first production session (4-6 hours)
+2. [docs/INTEGRATION_WORKFLOW.md](docs/INTEGRATION_WORKFLOW.md) — How all the pieces fit together
 
-- **Two-way communication**: Connect Claude AI to Ableton Live through a socket-based server
-- **Track manipulation**: Create, modify, and manipulate MIDI and audio tracks
-- **Instrument and effect selection**: Claude can access and load the right instruments, effects and sounds from Ableton's library
-- **Clip creation**: Create and edit MIDI clips with notes
-- **Session control**: Start and stop playback, fire clips, and control transport
+**Core Architecture:**
+- [flyin-colors-architecture/](flyin-colors-architecture/) — Complete 12-agent system, knowledge bases, MCP commands
+- [flyin-colors-architecture/agents/README.md](flyin-colors-architecture/agents/README.md) — Architecture overview
 
-## Components
+**Planning & Guides:**
+- [docs/guides/FLYIN_COLORS_ARCHITECTURE_REVIEW_2.md](docs/guides/FLYIN_COLORS_ARCHITECTURE_REVIEW_2.md) — 50 improvements with timeline
+- [docs/guides/CONSOLIDATED_PROJECT_MAP.md](docs/guides/CONSOLIDATED_PROJECT_MAP.md) — How to merge 11 agents → 4 Claude Projects
+- [docs/guides/CONTEXT_WINDOW_BUDGET.md](docs/guides/CONTEXT_WINDOW_BUDGET.md) — Token math for each project
 
-The system consists of two main components:
+**Production Templates:**
+- [templates/CONTINUATION_BRIEF_TEMPLATE.md](templates/CONTINUATION_BRIEF_TEMPLATE.md) — Resume work between sessions
+- [templates/FAST_CAPTURE_BRIEF_TEMPLATE.md](templates/FAST_CAPTURE_BRIEF_TEMPLATE.md) — Capture spontaneous ideas
+- [templates/REJECTION_BRIEF_TEMPLATE.md](templates/REJECTION_BRIEF_TEMPLATE.md) — Send feedback upstream
+- [templates/PROMPT_AB_TEST_TEMPLATE.md](templates/PROMPT_AB_TEST_TEMPLATE.md) — Test prompt improvements
 
-1. **Ableton Remote Script** (`Ableton_Remote_Script/__init__.py`): A MIDI Remote Script for Ableton Live that creates a socket server to receive and execute commands
-2. **MCP Server** (`server.py`): A Python server that implements the Model Context Protocol and connects to the Ableton Remote Script
+**Tools:**
+- [librosa_analysis_pipeline.py](librosa_analysis_pipeline.py) — Semi-automated reference track analysis
+- [requirements.txt](requirements.txt) — Python dependencies
 
-## Installation
+**Archive:**
+- [docs/archive/](docs/archive/) — Historical documentation and deprecated files
 
-### Installing via Smithery
+---
 
-To install Ableton Live Integration for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@ahujasid/ableton-mcp):
+## What This System Does
 
-```bash
-npx -y @smithery/cli install @ahujasid/ableton-mcp --client claude
+### The Vision
+Create professional Trance music that fuses:
+- **Goa Trance** (Filteria, Pleiadians) — Arpeggiated sequences, psychedelic atmospheres
+- **Nitzhonot** (Eyal Iceman) — Fast rolling bass, 145+ BPM, "winning" energy
+- **Nu-Metal** (BMTH, MCR) — Syncopated drums, emotional aggression, distorted textures
+- **Psycore** — Chaotic metallic textures, dark atmospheres
+- **Modern Classical** (Einaudi) — Melodic minimalism, emotional depth
+
+Narrative arc: **Horror → Defiance → Triumph** (responding to October 7th trauma)
+
+### The Workflow
+
+**Option A: Single Project (Recommended for First Track)**
+```
+You → Shadow Creator (Claude Project)
+     ├─ Acts as all agents in one conversation
+     ├─ Narrative → Theory → Design → MIDI → Mix
+     └─ You execute in Ableton manually
+
+Time to first music: 4-6 hours of setup + production time
 ```
 
-### Prerequisites
-
-- Ableton Live 10 or newer
-- Python 3.8 or newer
-- [uv package manager](https://astral.sh/uv)
-
-If you're on Mac, please install uv as:
+**Option B: 4-Project Specialized (After 1-2 Tracks)**
 ```
-brew install uv
-```
+Shadow Creator → Production Studio → Quality Control → System Architect
+     ↓                ↓                    ↓                 ↓
+  Concept        Sound + MIDI          Mix + Master      Infrastructure
+  + Theory       + Arrangement         + Export          + Docs
 
-Otherwise, install from [uv's official website][https://docs.astral.sh/uv/getting-started/installation/]
-
-⚠️ Do not proceed before installing UV
-
-### Claude for Desktop Integration
-
-[Follow along with the setup instructions video](https://youtu.be/iJWJqyVuPS8)
-
-1. Go to Claude > Settings > Developer > Edit Config > claude_desktop_config.json to include the following:
-
-```json
-{
-    "mcpServers": {
-        "AbletonMCP": {
-            "command": "uvx",
-            "args": [
-                "ableton-mcp"
-            ]
-        }
-    }
-}
+Handoff briefs passed between projects
+Time to first music: 10-12 hours of setup + production time
 ```
 
-### Cursor Integration
+**Option C: Ableton Automation (30 min setup)**
+```
+You → Claude Desktop → ahujasid/ableton-mcp → Ableton Live (automated)
+          ↓                                           ↓
+   Shadow Creator guidance                   Track/MIDI/instrument creation
+   (Claude Projects web)                     (automated via MCP server)
 
-Run ableton-mcp without installing it permanently through uvx. Go to Cursor Settings > MCP and paste this as a command:
+Requires: Install UV + configure Claude Desktop (30 min)
+See: flyin-colors-architecture/technical/ABLETON_MCP_SETUP.md
+```
+
+---
+
+## File Organization
 
 ```
-uvx ableton-mcp
+GoAI/
+├── README.md (this file)
+├── CLAUDE.md (Claude Code project context)
+├── QUICK_START_CHECKLIST.md          ← START HERE
+├── requirements.txt
+├── librosa_analysis_pipeline.py
+│
+├── templates/                         Production templates
+│   ├── CONTINUATION_BRIEF_TEMPLATE.md
+│   ├── FAST_CAPTURE_BRIEF_TEMPLATE.md
+│   ├── REJECTION_BRIEF_TEMPLATE.md
+│   └── PROMPT_AB_TEST_TEMPLATE.md
+│
+├── docs/
+│   ├── INTEGRATION_WORKFLOW.md       How it all fits together
+│   ├── guides/                        Planning & setup guides
+│   │   ├── FLYIN_COLORS_ARCHITECTURE_REVIEW_2.md
+│   │   ├── CONSOLIDATED_PROJECT_MAP.md
+│   │   └── CONTEXT_WINDOW_BUDGET.md
+│   ├── archive/                       Historical docs
+│   │   ├── CRITICAL_FIXES_APPLIED.md
+│   │   ├── CRITICAL_RETHINKING_APPLIED.md
+│   │   ├── IMPROVEMENTS_COMPLETED.md
+│   │   ├── TRANCE_PRODUCTION_ARCHITECTURE.md
+│   │   └── librosa_analysis_pipeline_old.py
+│   └── session-states/                Exported session states (future)
+│
+└── flyin-colors-architecture/         Core architecture
+    ├── agents/                        12 specialized AI agents
+    │   ├── README.md
+    │   ├── 00-shadow-creator.md
+    │   ├── 01-shared-context.md
+    │   ├── IO_CONTRACT_TEMPLATE.md
+    │   └── 02-13-*.md
+    ├── templates/
+    │   └── FLYIN_COLORS_PROJECT_BRIEF.md
+    ├── docs/
+    │   ├── MUSIC_THEORY_KNOWLEDGE_BASE.md
+    │   ├── BPM_TO_TIME_REFERENCE.md
+    │   ├── FREQUENCY_RANGE_OWNERSHIP.md
+    │   └── GIT_WORKFLOW.md
+    ├── technical/
+    │   ├── ABLETON_MCP_SETUP.md
+    │   ├── MCP_CUSTOM_COMMANDS.md    12 custom Flyin' Colors commands
+    │   ├── MCP_SERVER_IMPLEMENTATION_PLAN_OLD.md
+    │   ├── PUSH_3_INTEGRATION.md
+    │   └── SINGLE_MACHINE_ARCHITECTURE.md
+    ├── SHADOW_CREATOR_SETUP.md
+    ├── SHADOW_CREATOR_CONSOLIDATED.md
+    └── REFERENCE_ANALYST_SETUP.md
 ```
 
-⚠️ Only run one instance of the MCP server (either on Cursor or Claude Desktop), not both
+---
 
-### Installing the Ableton Remote Script
+## Current Status
 
-[Follow along with the setup instructions video](https://youtu.be/iJWJqyVuPS8)
+**Phase:** Architecture complete, ready for implementation
+**Next Action:** Follow QUICK_START_CHECKLIST.md Phase 0-1
+**Timeline:** 4-6 hours to first production-ready session
 
-1. Download the `AbletonMCP_Remote_Script/__init__.py` file from this repo
+### What's Complete
+- ✅ 12-agent architecture designed
+- ✅ Templates created (continuation, fast-capture, rejection, A/B test)
+- ✅ librosa analysis pipeline built
+- ✅ Context window budget calculated
+- ✅ Integration workflow documented
+- ✅ Quick start checklist created
+- ✅ Filled template examples added
+- ✅ Implementation timeline added to architecture review
 
-2. Copy the folder to Ableton's MIDI Remote Scripts directory. Different OS and versions have different locations. **One of these should work, you might have to look**:
+### What's Not Started
+- ⬜ Shadow Creator project creation (Phase 1, 4-6 hours)
+- ⬜ Ableton MCP setup (optional, 30 min) — automates track/MIDI creation
+- ⬜ Reference track analysis (Phase 3, ongoing)
+- ⬜ Style-fingerprint development (Phase 3-4, ongoing)
 
-   **For macOS:**
-   - Method 1: Go to Applications > Right-click on Ableton Live app → Show Package Contents → Navigate to:
-     `Contents/App-Resources/MIDI Remote Scripts/`
-   - Method 2: If it's not there in the first method, use the direct path (replace XX with your version number):
-     `/Users/[Username]/Library/Preferences/Ableton/Live XX/User Remote Scripts`
-   
-   **For Windows:**
-   - Method 1:
-     C:\Users\[Username]\AppData\Roaming\Ableton\Live x.x.x\Preferences\User Remote Scripts 
-   - Method 2:
-     `C:\ProgramData\Ableton\Live XX\Resources\MIDI Remote Scripts\`
-   - Method 3:
-     `C:\Program Files\Ableton\Live XX\Resources\MIDI Remote Scripts\`
-   *Note: Replace XX with your Ableton version number (e.g., 10, 11, 12)*
+---
 
-4. Create a folder called 'AbletonMCP' in the Remote Scripts directory and paste the downloaded '\_\_init\_\_.py' file
+## Technology Stack
 
-3. Launch Ableton Live
+**DAW:** Ableton Live 12 Suite
+**Hardware:**
+- Push 3 (hands-on MIDI performance)
+- RME Fireface UCX II (audio interface)
+- Dynaudio Core 7 (monitors)
 
-4. Go to Settings/Preferences → Link, Tempo & MIDI
+**Plugins:**
+- **Synths:** Serum, Vital, Massive, Sylenth1, Kontakt
+- **FX:** FabFilter (Pro-Q 3, Pro-C 2, Pro-L 2), iZotope RX 10, Saturn 2, Polyverse Wider
+- **Drums:** Sonic Academy Kick 2, samples
 
-5. In the Control Surface dropdown, select "AbletonMCP"
+**AI:**
+- Claude Sonnet 4.5 / Opus 4.6 (via Claude Projects or Claude Code)
+- MCP (Model Context Protocol) for automation (future)
 
-6. Set Input and Output to "None"
+**Analysis:**
+- Python 3.9+ with librosa, numpy, soundfile, matplotlib
 
-## Usage
+---
 
-### Starting the Connection
+## Three Paths to Your First Track
 
-1. Ensure the Ableton Remote Script is loaded in Ableton Live
-2. Make sure the MCP server is configured in Claude Desktop or Cursor
-3. The connection should be established automatically when you interact with Claude
+### Path 1: Fastest (4-6 hours setup)
+1. Do QUICK_START_CHECKLIST.md Phase 0-1
+2. Create Shadow Creator project only
+3. Start producing manually in Ableton
+4. Use Shadow Creator as advisor/co-pilot
 
-### Using with Claude
+**Pros:** Fastest to music, learn by doing
+**Cons:** No automation, manual execution
 
-Once the config file has been set on Claude, and the remote script is running in Ableton, you will see a hammer icon with tools for the Ableton MCP.
+### Path 2: Balanced (10-12 hours setup)
+1. Do QUICK_START_CHECKLIST.md Phase 0-1
+2. Create all 4 Claude Projects (CONSOLIDATED_PROJECT_MAP.md)
+3. Analyze 2-3 reference tracks (librosa pipeline)
+4. Start producing with specialized agents
 
-## Capabilities
+**Pros:** Better workflow, specialized agents, reference library started
+**Cons:** More upfront work before making sound
 
-- Get session and track information
-- Create and modify MIDI and audio tracks
-- Create, edit, and trigger clips
-- Control playback
-- Load instruments and effects from Ableton's browser
-- Add notes to MIDI clips
-- Change tempo and other session parameters
+### Path 3: Full Build (15-20 hours setup)
+1. Do QUICK_START_CHECKLIST.md Phase 0-1
+2. Create all 4 Claude Projects
+3. Set up ahujasid/ableton-mcp (30 min automation)
+4. Analyze 5+ reference tracks
+5. Develop style-fingerprint files
 
-## Example Commands
+**Pros:** Automation, rich knowledge base, production-ready
+**Cons:** Upfront investment before making music (but faster than custom MCP build)
 
-Here are some examples of what you can ask Claude to do:
+**Recommendation:** Path 1 for first track, Path 2 for second track, Path 3 for long-term (after 3-5 tracks)
 
-- "Create an 80s synthwave track" [Demo](https://youtu.be/VH9g66e42XA)
-- "Create a Metro Boomin style hip-hop beat"
-- "Create a new MIDI track with a synth bass instrument"
-- "Add reverb to my drums"
-- "Create a 4-bar MIDI clip with a simple melody"
-- "Get information about the current Ableton session"
-- "Load a 808 drum rack into the selected track"
-- "Add a jazz chord progression to the clip in track 1"
-- "Set the tempo to 120 BPM"
-- "Play the clip in track 2"
+---
 
+## Key Concepts
 
-## Troubleshooting
+### DNA-Driven Production
+Extract musical patterns from reference artists (Filteria, Pleiadians, Eyal Iceman) using librosa analysis pipeline → adapt for Flyin' Colors unique vision.
 
-- **Connection issues**: Make sure the Ableton Remote Script is loaded, and the MCP server is configured on Claude
-- **Timeout errors**: Try simplifying your requests or breaking them into smaller steps
-- **Have you tried turning it off and on again?**: If you're still having connection errors, try restarting both Claude and Ableton Live
+### Narrative-First Workflow
+Every musical decision serves the emotional story (Horror → Defiance → Triumph). No generic trance formulas.
 
-## Technical Details
+### Semi-Automated Execution
+- **Tiers 0-2:** Human-AI collaborative (creative decisions)
+- **Tier 3:** Automated via MCP server (technical execution) — future
+- **Tiers 4-5:** Semi-automated (AI proposes, human approves)
 
-### Communication Protocol
+### Contract-Based Production
+Music Theory Architect defines key, scale, progression → all agents follow this contract → no mismatched notes.
 
-The system uses a simple JSON-based protocol over TCP sockets:
+### Fast-Capture Mode
+Reverse workflow for spontaneous creation: Jam first → extract DNA → find narrative → build outward. Preserves creative momentum.
 
-- Commands are sent as JSON objects with a `type` and optional `params`
-- Responses are JSON objects with a `status` and `result` or `message`
+---
 
-### Limitations & Security Considerations
+## Getting Help
 
-- Creating complex musical arrangements might need to be broken down into smaller steps
-- The tool is designed to work with Ableton's default devices and browser items
-- Always save your work before extensive experimentation
+**Architecture questions:** Read INTEGRATION_WORKFLOW.md
+**Setup questions:** Follow QUICK_START_CHECKLIST.md step-by-step
+**During production:** Use templates (CONTINUATION_BRIEF, FAST_CAPTURE_BRIEF, REJECTION_BRIEF)
+**Improvements:** See FLYIN_COLORS_ARCHITECTURE_REVIEW_2.md for the 50 documented improvements
 
-## Contributing
+**Emergency:** "I'm lost" → Go to INTEGRATION_WORKFLOW.md bottom section ("Emergency: Which Doc Do I Need?")
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+---
 
-## Disclaimer
+## License & Attribution
 
-This is a third-party integration and not made by Ableton.
+- **Flyin' Colors Architecture:** Created by Avi + Claude (2026)
+- **Framework Adapted From:** mastering-claude-code v4.4 (tier-based agent system)
+- **Music:** All rights reserved (trauma-based artistic work)
+- **Code/Templates:** MIT License (feel free to adapt for your projects)
+
+---
+
+**Make music. Everything else is just infrastructure.**
