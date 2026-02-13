@@ -656,6 +656,7 @@ def load_drum_kit(ctx: Context, track_index: int, rack_uri: str, kit_path: str) 
 # ============================================================================
 
 from flyin_colors.template_commands import create_flyin_colors_session as _fc_create_session
+from flyin_colors.midi_generation import generate_rolling_bass as _fc_generate_rolling_bass
 
 @mcp.tool()
 def create_flyin_colors_session(
@@ -718,6 +719,96 @@ def create_flyin_colors_session(
         return json.dumps({
             "status": "error",
             "message": f"Error creating Flyin' Colors session: {str(e)}"
+        }, indent=2)
+
+@mcp.tool()
+def generate_rolling_bass(
+    ctx: Context,
+    track_index: int,
+    clip_slot: int = 0,
+    key: str = "D",
+    octave: int = 2,
+    scale: str = "natural_minor",
+    bars: int = 4,
+    pattern_type: str = "rolling_16th",
+    velocity_pattern: List[int] = None,
+    chord_progression: List[str] = None,
+    bars_per_chord: int = 1,
+    filter_hint: str = "medium"
+) -> str:
+    """
+    Generate a rolling bass MIDI clip - the signature Flyin' Colors sound.
+
+    Creates a MIDI clip with rolling 16th-note bass patterns that define
+    the Flyin' Colors aesthetic. Supports multiple rhythm patterns and
+    automatic chord progression mapping.
+
+    Parameters:
+    - track_index: Which track to place clip on (use track 4 for FC_RollingBass)
+    - clip_slot: Scene/clip slot index (default: 0)
+    - key: Root note - "C", "D", "E", etc. (default: "D")
+    - octave: MIDI octave - 2 = bass range (D2 = MIDI 38) (default: 2)
+    - scale: Scale type (default: "natural_minor")
+             Options: "natural_minor", "harmonic_minor", "phrygian_dominant", "chromatic"
+    - bars: Clip length in bars (default: 4)
+    - pattern_type: Rhythm pattern (default: "rolling_16th")
+                   Options: "rolling_16th" (mechanical, relentless),
+                           "pulsing_8th" (pumping Nitzhonot),
+                           "syncopated" (groovy, off-beats),
+                           "gallop" (nu-metal 16-16-8th)
+    - velocity_pattern: Repeating velocity cycle (default: [100, 85, 95, 80])
+    - chord_progression: Roman numerals (default: ["i"])
+                        Examples: ["i", "bVI", "bVII", "i"], ["i", "iv", "v", "i"]
+    - bars_per_chord: Bars before chord changes (default: 1)
+    - filter_hint: Metadata for filter position - "closed" (600Hz),
+                   "medium" (900Hz), "open" (1200Hz) (default: "medium")
+
+    Pattern Types:
+    - rolling_16th: Every 16th note, single root - mechanical, Horror phase
+    - pulsing_8th: Every 8th, root+octave alternating - Nitzhonot energy, Defiance
+    - syncopated: 16ths with off-beat accents - groovy, Transitions
+    - gallop: 16-16-8th repeating - aggressive nu-metal, Horror→Defiance
+
+    Example:
+    generate_rolling_bass(
+        track_index=4,
+        key="D",
+        bars=4,
+        pattern_type="rolling_16th",
+        chord_progression=["i", "bVI", "bVII", "i"]
+    )
+
+    Creates: 64-note rolling bass pattern in Dm over 4 bars
+    """
+    try:
+        ableton = get_ableton_connection()
+
+        # Convert velocity_pattern and chord_progression to lists if needed
+        if velocity_pattern is None:
+            velocity_pattern = [100, 85, 95, 80]
+        if chord_progression is None:
+            chord_progression = ["i"]
+
+        result = _fc_generate_rolling_bass(
+            ableton_connection=ableton,
+            track_index=track_index,
+            clip_slot=clip_slot,
+            key=key,
+            octave=octave,
+            scale=scale,
+            bars=bars,
+            pattern_type=pattern_type,
+            velocity_pattern=velocity_pattern,
+            chord_progression=chord_progression,
+            bars_per_chord=bars_per_chord,
+            filter_hint=filter_hint
+        )
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error generating rolling bass: {str(e)}")
+        return json.dumps({
+            "status": "error",
+            "message": f"Error generating rolling bass: {str(e)}"
         }, indent=2)
 
 # ============================================================================
