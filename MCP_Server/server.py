@@ -660,6 +660,7 @@ from flyin_colors.template_commands import create_nitzhonot_bass_template as _fc
 from flyin_colors.midi_generation import generate_rolling_bass as _fc_generate_rolling_bass
 from flyin_colors.midi_generation import generate_goa_arp as _fc_generate_goa_arp
 from flyin_colors.midi_generation import generate_buildup_riser as _fc_generate_buildup_riser
+from flyin_colors.midi_generation import apply_goa_groove as _fc_apply_goa_groove
 from flyin_colors.session_commands import (
     set_section_markers as _fc_set_section_markers,
     export_session_state as _fc_export_session_state,
@@ -673,6 +674,10 @@ from flyin_colors.mix_commands import (
     apply_frequency_ownership as _fc_apply_frequency_ownership,
     check_frequency_conflicts as _fc_check_frequency_conflicts
 )
+from flyin_colors.artist_presets import (
+    apply_artist_style as _fc_apply_artist_style,
+    get_available_artists as _fc_get_available_artists
+)
 
 @mcp.tool()
 def create_flyin_colors_session(
@@ -680,7 +685,8 @@ def create_flyin_colors_session(
     bpm: int = 148,
     key: str = "Dm",
     track_name: str = "FC_Track_01",
-    section_type: str = "full"
+    section_type: str = "full",
+    style: str = None
 ) -> str:
     """
     Create a complete Flyin' Colors session template with standard track layout.
@@ -697,8 +703,26 @@ def create_flyin_colors_session(
     - track_name: Name for this production (default: "FC_Track_01")
     - section_type: Track template type - "full" (all 11 tracks),
                     "minimal" (kick+bass+lead), or "jam" (bass+drums)
+    - style: Goa trance style preset (optional, default: None).
+             When set, overrides section_type and attaches DNA-derived metadata.
 
-    Track Layout (full mode):
+             Options:
+             - "dark_goa": Etnica/Shakta territory. Centroid ~2100Hz, harmonic minor,
+                           bass filter 600-1200Hz, sub energy 58%, slow chord changes.
+                           Deep, dark, hypnotic.
+             - "bright_goa": Pleiadians/Filteria territory. Centroid ~3100Hz, phrygian,
+                             bass filter 900-2000Hz, sub energy 52%, faster chords.
+                             Airy, shimmering, melodic.
+             - "standard_goa": Balanced average of all 8 reference tracks. Centroid
+                               ~2750Hz, harmonic minor, bass filter 888-2000Hz,
+                               sub energy 55%. The default Goa trance sound.
+
+             When a style is set, the response includes a style_metadata object with:
+             target_centroid_hz, recommended_scale, bass_filter_range_hz,
+             sub_energy_target_pct, frequency_distribution_pct, reference_tracks,
+             recommended_bpm, harmony_bars_per_chord, and description.
+
+    Track Layout (full/goa modes):
     1. FC_Kick (MIDI)
     2. FC_Hats (MIDI)
     3. FC_Perc (MIDI)
@@ -717,8 +741,15 @@ def create_flyin_colors_session(
     C. FC_Delay (ping-pong, 1/8 note)
     D. FC_Distortion (saturator, medium drive)
 
-    Example:
+    Examples:
+    # Standard session (no style)
     create_flyin_colors_session(bpm=148, key="Dm", track_name="FC_HorrorToTriumph_01")
+
+    # Dark Goa session (Etnica/Shakta style)
+    create_flyin_colors_session(bpm=145, key="Am", track_name="FC_DarkVimana", style="dark_goa")
+
+    # Bright Goa session (Pleiadians style)
+    create_flyin_colors_session(bpm=148, key="Dm", track_name="FC_Alcyone", style="bright_goa")
     """
     try:
         ableton = get_ableton_connection()
@@ -727,7 +758,8 @@ def create_flyin_colors_session(
             bpm=bpm,
             key=key,
             track_name=track_name,
-            section_type=section_type
+            section_type=section_type,
+            style=style
         )
         return json.dumps(result, indent=2)
     except Exception as e:
@@ -750,7 +782,10 @@ def generate_rolling_bass(
     velocity_pattern: List[int] = None,
     chord_progression: List[str] = None,
     bars_per_chord: int = 1,
-    filter_hint: str = "medium"
+    filter_hint: str = "medium",
+    humanize: bool = False,
+    humanize_amount: float = 1.0,
+    humanize_seed: int = None
 ) -> str:
     """
     Generate a rolling bass MIDI clip - the signature Flyin' Colors sound.
@@ -778,6 +813,11 @@ def generate_rolling_bass(
     - bars_per_chord: Bars before chord changes (default: 1)
     - filter_hint: Metadata for filter position - "closed" (600Hz),
                    "medium" (900Hz), "open" (1200Hz) (default: "medium")
+    - humanize: Apply Goa groove after generating (default: False)
+               When True, applies ~25ms natural timing drift from DNA analysis
+    - humanize_amount: Groove intensity 0.0-1.0 (default: 1.0)
+                      0.0 = no groove, 1.0 = full 25ms drift
+    - humanize_seed: Random seed for reproducible humanization (default: None)
 
     Pattern Types:
     - rolling_16th: Every 16th note, single root - mechanical, Horror phase
@@ -794,7 +834,16 @@ def generate_rolling_bass(
         chord_progression=["i", "bVI", "bVII", "i"]
     )
 
-    Creates: 64-note rolling bass pattern in Dm over 4 bars
+    Example with groove:
+    generate_rolling_bass(
+        track_index=4,
+        key="D",
+        bars=4,
+        humanize=True,
+        humanize_amount=0.8
+    )
+
+    Creates: 64-note rolling bass pattern in Dm over 4 bars (with optional groove)
     """
     try:
         ableton = get_ableton_connection()
@@ -817,7 +866,10 @@ def generate_rolling_bass(
             velocity_pattern=velocity_pattern,
             chord_progression=chord_progression,
             bars_per_chord=bars_per_chord,
-            filter_hint=filter_hint
+            filter_hint=filter_hint,
+            humanize=humanize,
+            humanize_amount=humanize_amount,
+            humanize_seed=humanize_seed
         )
         return json.dumps(result, indent=2)
     except Exception as e:
@@ -1298,6 +1350,82 @@ def generate_buildup_riser(
         }, indent=2)
 
 @mcp.tool()
+def apply_goa_groove(
+    ctx: Context,
+    track_index: int,
+    clip_slot: int = 0,
+    groove_amount: float = 1.0,
+    seed: int = None
+) -> str:
+    """
+    Humanize a MIDI clip with natural timing drift from real Goa Trance reference analysis.
+
+    Applies ~25ms random timing offsets and subtle velocity variation derived from
+    analyzing 8 classic Goa Trance tracks (Filteria, Pleiadians, Etnica, Shakta).
+    None of the reference tracks were perfectly quantized -- they all showed ~25.5ms
+    average grid deviation, which is what gives Goa Trance its organic, driving feel.
+
+    This command uses the bass grid_histogram from COMBINED_GOA_DNA.json to weight
+    how much each 16th-note position drifts:
+    - Quarter-note positions (beats 1/2/3/4) stay tighter (grid strength 0.92-0.96)
+    - Off-beat 16th positions drift more freely (grid strength 0.80-0.83)
+
+    Timing drift is clamped so notes never cross into the next 16th-note grid position.
+    Velocity variation is ±3 from original, matching the narrow 122-125 range observed
+    in the reference tracks.
+
+    Parameters:
+    - track_index: Track containing the clip to humanize
+    - clip_slot: Clip slot index (default: 0)
+    - groove_amount: Groove intensity (default: 1.0)
+                    0.0 = no change (bypass)
+                    0.5 = half drift (~12ms)
+                    1.0 = full drift (~25ms, matches reference tracks)
+    - seed: Random seed for reproducible results (default: None = random each time)
+            Use the same seed to get identical humanization on multiple clips
+
+    How it works:
+    1. Reads all existing notes from the clip
+    2. For each note, determines its 16th-note grid position (0-15)
+    3. Looks up that position's grid strength from the DNA histogram
+    4. Applies weighted random timing offset (strong beats = less drift)
+    5. Applies ±3 velocity variation
+    6. Writes modified notes back to the clip
+
+    Returns:
+    - notes_humanized: Number of notes processed
+    - avg_timing_drift_ms: Average timing offset applied (in milliseconds)
+    - avg_velocity_offset: Average velocity change applied
+    - groove_amount: The groove_amount used
+    - seed: The seed used (for reproduction)
+
+    Example:
+    apply_goa_groove(track_index=4, clip_slot=0, groove_amount=1.0)
+
+    Example with reproducible seed:
+    apply_goa_groove(track_index=4, clip_slot=0, groove_amount=0.8, seed=42)
+
+    Tip: Use after generate_rolling_bass or generate_goa_arp for instant groove.
+    Or set humanize=True on generate_rolling_bass to do both in one step.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = _fc_apply_goa_groove(
+            ableton_connection=ableton,
+            track_index=track_index,
+            clip_slot=clip_slot,
+            groove_amount=groove_amount,
+            seed=seed
+        )
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error applying Goa groove: {str(e)}")
+        return json.dumps({
+            "status": "error",
+            "message": f"Error applying Goa groove: {str(e)}"
+        }, indent=2)
+
+@mcp.tool()
 def create_nitzhonot_bass_template(
     ctx: Context,
     key: str = "Dm",
@@ -1490,6 +1618,84 @@ def export_session_state(
             "status": "error",
             "message": f"Error exporting session state: {str(e)}"
         }, indent=2)
+
+@mcp.tool()
+def apply_artist_style(
+    ctx: Context,
+    artist: str
+) -> str:
+    """
+    Get a specific artist's DNA preset derived from reference track analysis.
+
+    Returns the full measured fingerprint for an artist so you can configure
+    session creation, bass patterns, arp style, groove, and mixing to match
+    their sonic signature.
+
+    Parameters:
+    - artist: Artist name (case-insensitive)
+              Options: "filteria", "pleiadians", "etnica", "shakta"
+
+    Artist Profiles:
+
+    Filteria (3 tracks analyzed):
+    - BPM: 146.4 | Centroid: 2960Hz | Sub: 52.1%
+    - Scales: phrygian_dominant, phrygian, harmonic_minor
+    - Chord changes: every 10 bars (moderate)
+    - Bass filter: 1023-2000Hz (opens wide)
+    - Character: Melodic, shimmering, psychedelic. Eastern-tinged melodies.
+
+    Pleiadians (2 tracks analyzed):
+    - BPM: 143.6 | Centroid: 3041Hz | Sub: 56.1%
+    - Scales: dorian, harmonic_minor
+    - Chord changes: every 11.3 bars (slowest — hypnotic drones)
+    - Bass filter: 1076-2000Hz (stays open)
+    - Character: Hypnotic, spacious, cosmic. Floating ethereal quality.
+
+    Etnica (2 tracks analyzed):
+    - BPM: 143.6 | Centroid: 2386Hz | Sub: 54.4%
+    - Scales: harmonic_minor (recommended)
+    - Chord changes: every 3.5 bars (fastest — restless, urgent)
+    - Bass filter: 797-2000Hz (starts dark)
+    - Character: Dark, driving, deep. Heavy low-end, raw groove.
+
+    Shakta (1 track analyzed):
+    - BPM: 152.0 | Centroid: 2359Hz | Sub: 65.1%
+    - Scales: phrygian
+    - Chord changes: every 2.7 bars (very fast, aggressive)
+    - Bass filter: 612-1996Hz (starts very dark)
+    - Character: Aggressive, sub-heavy, fast. Widest dynamics, most tension.
+
+    Returns JSON with:
+    - preset: Full DNA data (tempo, key, bass velocity, spectral, frequency, harmony, groove)
+    - usage_hints: Recommended settings for session creation, rolling bass, groove, narrative arc
+
+    Example workflow:
+    1. apply_artist_style(artist="filteria")  # Get the DNA
+    2. create_flyin_colors_session(bpm=146, key="Dm", style="bright_goa")  # Use recommended BPM
+    3. generate_rolling_bass(track_index=4, key="D", scale="phrygian_dominant",
+           velocity_pattern=[124,126,125,126,125,125,123,124,125,125,123,124,124,125,124,124])
+    4. apply_goa_groove(track_index=4, groove_amount=1.0)  # Apply Filteria's groove feel
+    """
+    result = _fc_apply_artist_style(artist=artist)
+    return json.dumps(result, indent=2)
+
+@mcp.tool()
+def get_artist_presets(ctx: Context) -> str:
+    """
+    List all available artist style presets.
+
+    Returns a summary of each artist preset with their name, number of tracks
+    analyzed, and a brief character description.
+
+    Use this to discover available artists, then call apply_artist_style()
+    with the artist name to get their full DNA preset.
+
+    Example:
+    get_artist_presets()
+    # Returns: [{"name": "filteria", "display_name": "Filteria", ...}, ...]
+    """
+    result = _fc_get_available_artists()
+    return json.dumps(result, indent=2)
 
 # ============================================================================
 # End Flyin' Colors Extension

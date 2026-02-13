@@ -20,10 +20,13 @@ __author__ = "Avi + Claude"
 from .template_commands import *
 from .midi_generation import *
 from .session_commands import *
+from .artist_presets import *
 
 __all__ = [
     "create_flyin_colors_session",
     "generate_rolling_bass",
     "set_section_markers",
-    "export_session_state"
+    "export_session_state",
+    "apply_artist_style",
+    "get_available_artists"
 ]

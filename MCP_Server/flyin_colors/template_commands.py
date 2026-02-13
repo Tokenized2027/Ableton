@@ -8,7 +8,7 @@ track layout, routing, and sends.
 
 import logging
 from typing import Dict, Any
-from .utils.constants import FLYIN_COLORS_TRACKS, FLYIN_COLORS_SENDS, SECTION_TYPES
+from .utils.constants import FLYIN_COLORS_TRACKS, FLYIN_COLORS_SENDS, SECTION_TYPES, GOA_STYLE_PRESETS
 
 logger = logging.getLogger("FlyinColorsTemplates")
 
@@ -18,7 +18,8 @@ def create_flyin_colors_session(
     bpm: int = 148,
     key: str = "Dm",
     track_name: str = "FC_Track_01",
-    section_type: str = "full"
+    section_type: str = "full",
+    style: str = None
 ) -> Dict[str, Any]:
     """
     Create a complete Flyin' Colors session template.
@@ -29,10 +30,29 @@ def create_flyin_colors_session(
     - key: Musical key (default: "Dm")
     - track_name: Project name (default: "FC_Track_01")
     - section_type: "full", "minimal", or "jam" (default: "full")
+    - style: Goa trance style preset (optional). One of "dark_goa", "bright_goa",
+             "standard_goa". When set, overrides section_type to the matching goa
+             layout and attaches style metadata (filter ranges, scale recommendations,
+             spectral targets) to the session response.
 
     Returns:
     - Dictionary with creation status and stats
     """
+
+    # If a Goa style is specified, override section_type and resolve preset
+    style_preset = None
+    if style is not None:
+        if style not in GOA_STYLE_PRESETS:
+            raise ValueError(
+                f"Invalid style: {style}. Must be one of: {list(GOA_STYLE_PRESETS.keys())}"
+            )
+        style_preset = GOA_STYLE_PRESETS[style]
+        section_type = style  # dark_goa / bright_goa / standard_goa
+        logger.info(
+            f"Goa style '{style}' selected. Target centroid: {style_preset['target_centroid_hz']}Hz, "
+            f"scale: {style_preset['recommended_scale']}, "
+            f"bass filter: {style_preset['bass_filter_range']}"
+        )
 
     logger.info(f"Creating Flyin' Colors session: {track_name} @ {bpm} BPM in {key}")
 
@@ -142,6 +162,22 @@ def create_flyin_colors_session(
             "message": f"Session {track_name} ready. {tracks_created} tracks + {sends_created} sends.",
             "warnings": []
         }
+
+        # Attach Goa style metadata when a style preset was used
+        if style_preset is not None:
+            response["style"] = style
+            response["style_metadata"] = {
+                "target_centroid_hz": style_preset["target_centroid_hz"],
+                "recommended_scale": style_preset["recommended_scale"],
+                "bass_filter_range_hz": list(style_preset["bass_filter_range"]),
+                "sub_energy_target_pct": style_preset["sub_energy_target_pct"],
+                "frequency_distribution_pct": style_preset["frequency_distribution_pct"],
+                "reference_tracks": style_preset["reference_tracks"],
+                "recommended_bpm": style_preset["recommended_bpm"],
+                "harmony_bars_per_chord": style_preset["harmony_bars_per_chord"],
+                "description": style_preset["description"],
+            }
+            response["message"] += f" Style: {style} (centroid target: {style_preset['target_centroid_hz']}Hz)."
 
         if errors:
             response["warnings"] = errors

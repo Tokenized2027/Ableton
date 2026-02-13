@@ -3,9 +3,13 @@ MIDI Generation Commands for Flyin' Colors
 
 Command 2: generate_rolling_bass
 Generates rolling 16th-note bass patterns - the signature Flyin' Colors sound.
+
+Command 5: apply_goa_groove
+Humanizes MIDI patterns with ~25ms natural timing drift from reference track analysis.
 """
 
 import logging
+import random
 from typing import Dict, Any, List
 
 logger = logging.getLogger("FlyinColorsMIDI")
@@ -105,7 +109,10 @@ def generate_rolling_bass(
     velocity_pattern: List[int] = None,
     chord_progression: List[str] = None,
     bars_per_chord: int = 1,
-    filter_hint: str = "medium"
+    filter_hint: str = "medium",
+    humanize: bool = False,
+    humanize_amount: float = 1.0,
+    humanize_seed: int = None
 ) -> Dict[str, Any]:
     """
     Generate a rolling bass MIDI clip - the signature Flyin' Colors sound.
@@ -123,6 +130,9 @@ def generate_rolling_bass(
         chord_progression: Roman numerals (default: ["i"])
         bars_per_chord: Bars before chord changes
         filter_hint: Metadata for filter position ("closed", "medium", "open")
+        humanize: Apply Goa groove after generating (default: False)
+        humanize_amount: Groove intensity 0.0-1.0 (default: 1.0)
+        humanize_seed: Random seed for reproducible humanization (default: None)
 
     Returns:
         Dictionary with generation results
@@ -315,6 +325,23 @@ def generate_rolling_bass(
         }
 
         logger.info(f"Rolling bass generated: {len(notes)} notes, {len(unique_pitches)} unique pitches")
+
+        # Step 5: Apply Goa groove humanization if requested
+        if humanize:
+            logger.info(f"Applying Goa groove (amount={humanize_amount}) to generated bass")
+            groove_result = apply_goa_groove(
+                ableton_connection=ableton_connection,
+                track_index=track_index,
+                clip_slot=clip_slot,
+                groove_amount=humanize_amount,
+                seed=humanize_seed,
+            )
+            result["humanize"] = groove_result
+            if groove_result.get("status") == "success":
+                logger.info(f"Groove applied: avg drift {groove_result.get('avg_timing_drift_ms', 0)}ms")
+            else:
+                logger.warning(f"Groove application returned: {groove_result.get('message', 'unknown issue')}")
+
         return result
 
     except Exception as e:
@@ -364,11 +391,9 @@ def generate_goa_arp(
     Returns:
         Dictionary with generation results
     """
-    import random
 
     logger.info(f"Generating Goa arp: {key} {scale}, {bars} bars, rate: {rate}, direction: {direction}")
 
-    # Defaults
     if chord_tones is None:
         chord_tones = ["1", "3", "5"]
     if velocity_range is None:
@@ -693,6 +718,195 @@ def generate_buildup_riser(
 
     except Exception as e:
         error_msg = f"Error generating buildup riser: {str(e)}"
+        logger.error(error_msg)
+        return {
+            "status": "error",
+            "message": error_msg
+        }
+
+
+# Bass grid_histogram from 8-track Goa reference analysis (COMBINED_GOA_DNA.json)
+# Higher values = stronger grid lock (quarter-note positions), lower = more drift allowed
+# Positions 0-15 map to 16th notes within a single bar
+GOA_BASS_GRID_HISTOGRAM = [
+    0.81, 0.86, 0.82, 0.96,
+    0.81, 0.88, 0.83, 0.93,
+    0.83, 0.88, 0.82, 0.95,
+    0.81, 0.90, 0.80, 0.92
+]
+
+# Reference groove constants from COMBINED_GOA_DNA.json
+GOA_AVG_GRID_DEVIATION_MS = 25.5  # Average timing drift in milliseconds
+GOA_VELOCITY_RANGE = (122, 125)   # Observed narrow velocity range
+
+
+def apply_goa_groove(
+    ableton_connection,
+    track_index: int,
+    clip_slot: int = 0,
+    groove_amount: float = 1.0,
+    seed: int = None,
+) -> Dict[str, Any]:
+    """
+    Humanize a MIDI clip with natural timing drift based on real Goa Trance reference analysis.
+
+    Applies ~25ms random timing offsets and subtle velocity variation derived from
+    8-track reference analysis (Filteria, Pleiadians, Etnica, Shakta). Uses the bass
+    grid_histogram to weight which 16th-note positions get more or less drift --
+    quarter-note positions (strong beats) stay tighter, off-beats drift more.
+
+    Parameters:
+        ableton_connection: Active connection to Ableton
+        track_index: Track containing the clip to humanize
+        clip_slot: Clip slot index (default: 0)
+        groove_amount: Groove intensity, 0.0 = no change, 1.0 = full 25ms drift (default: 1.0)
+        seed: Random seed for reproducible humanization (default: None = random each time)
+
+    Returns:
+        Dictionary with humanization results
+    """
+
+    logger.info(f"Applying Goa groove to track {track_index}, slot {clip_slot}, amount {groove_amount}")
+
+    if groove_amount < 0.0 or groove_amount > 1.0:
+        raise ValueError(f"groove_amount must be between 0.0 and 1.0, got {groove_amount}")
+
+    if seed is not None:
+        random.seed(seed)
+
+    try:
+        # Step 1: Read existing notes from the clip
+        logger.info(f"Reading notes from track {track_index}, slot {clip_slot}")
+        clip_data = ableton_connection.send_command("get_clip_notes", {
+            "track_index": track_index,
+            "clip_index": clip_slot
+        })
+
+        notes = clip_data.get("notes", [])
+        if not notes:
+            return {
+                "status": "error",
+                "message": f"No notes found in clip at track {track_index}, slot {clip_slot}"
+            }
+
+        logger.info(f"Read {len(notes)} notes from clip")
+
+        # Step 2: Calculate timing constants
+        # Ableton uses 960 PPQN, 16th note = 240 ticks
+        ticks_per_16th = 240
+        # Convert max drift from ms to ticks
+        # At 145.7 BPM (DNA average): 1 beat = 60/145.7 = 0.4117s = 411.7ms
+        # 1 tick = 411.7ms / 960 = 0.4289ms
+        # 25.5ms / 0.4289 = ~59.5 ticks
+        # We use a BPM-independent approximation: 25ms is roughly 1/4 of a 16th note
+        # at typical Goa BPMs (143-152), so ~60 ticks max drift
+        max_drift_ticks = int(60 * groove_amount)
+
+        # Maximum allowed drift is half a 16th note (120 ticks) to prevent
+        # notes from crossing into the next 16th-note grid position
+        safety_limit_ticks = ticks_per_16th // 2  # 120 ticks
+
+        # Step 3: Apply humanization to each note
+        modified_notes = []
+        total_timing_offset = 0.0
+        total_velocity_offset = 0.0
+
+        for note in notes:
+            start_time = note.get("start_time", 0)
+            velocity = note.get("velocity", 100)
+            pitch = note.get("pitch", 60)
+            duration = note.get("duration", ticks_per_16th)
+            mute = note.get("mute", False)
+
+            # Determine which 16th-note position this note falls on (0-15)
+            position_in_bar = int((start_time / ticks_per_16th) % 16)
+
+            # Get grid strength for this position from the DNA histogram
+            grid_strength = GOA_BASS_GRID_HISTOGRAM[position_in_bar]
+
+            # Invert grid strength to get drift amount:
+            # High grid_strength (0.96 at quarter notes) = LOW drift
+            # Low grid_strength (0.80 at off-beats) = HIGH drift
+            # Scale: 0.80 -> full drift, 0.96 -> minimal drift
+            drift_scale = 1.0 - ((grid_strength - 0.80) / (0.96 - 0.80))
+            drift_scale = max(0.05, min(1.0, drift_scale))  # Clamp to 0.05-1.0
+
+            # Calculate timing offset (random within ± scaled max)
+            position_max_drift = int(max_drift_ticks * drift_scale)
+            position_max_drift = min(position_max_drift, safety_limit_ticks)
+
+            if position_max_drift > 0:
+                timing_offset = random.randint(-position_max_drift, position_max_drift)
+            else:
+                timing_offset = 0
+
+            # Apply timing offset (ensure start_time never goes negative)
+            new_start = max(0, start_time + timing_offset)
+            total_timing_offset += abs(timing_offset)
+
+            # Apply velocity variation: ±3 from original (matching 122-125 observed range)
+            velocity_max_offset = int(3 * groove_amount)
+            if velocity_max_offset > 0:
+                vel_offset = random.randint(-velocity_max_offset, velocity_max_offset)
+            else:
+                vel_offset = 0
+
+            new_velocity = max(1, min(127, velocity + vel_offset))
+            total_velocity_offset += abs(vel_offset)
+
+            modified_notes.append({
+                "pitch": pitch,
+                "start_time": new_start,
+                "duration": duration,
+                "velocity": new_velocity,
+                "mute": mute
+            })
+
+        # Step 4: Clear existing notes and write modified notes back
+        logger.info(f"Removing existing notes from clip")
+        ableton_connection.send_command("remove_notes_from_clip", {
+            "track_index": track_index,
+            "clip_index": clip_slot
+        })
+
+        logger.info(f"Writing {len(modified_notes)} humanized notes back to clip")
+        ableton_connection.send_command("add_notes_to_clip", {
+            "track_index": track_index,
+            "clip_index": clip_slot,
+            "notes": modified_notes
+        })
+
+        # Step 5: Update clip name to indicate groove was applied
+        try:
+            ableton_connection.send_command("set_clip_name", {
+                "track_index": track_index,
+                "clip_index": clip_slot,
+                "name_suffix": f"_groove{int(groove_amount * 100)}"
+            })
+        except Exception:
+            # set_clip_name with suffix may not be supported; non-critical
+            pass
+
+        # Calculate stats
+        avg_timing_ms = (total_timing_offset / len(notes)) * 0.4289 if notes else 0
+        avg_velocity_offset = total_velocity_offset / len(notes) if notes else 0
+
+        result = {
+            "status": "success",
+            "notes_humanized": len(modified_notes),
+            "groove_amount": groove_amount,
+            "seed": seed,
+            "avg_timing_drift_ms": round(avg_timing_ms, 1),
+            "avg_velocity_offset": round(avg_velocity_offset, 1),
+            "max_drift_ticks": max_drift_ticks,
+            "reference": "COMBINED_GOA_DNA.json (8-track Goa Trance analysis)"
+        }
+
+        logger.info(f"Goa groove applied: {len(modified_notes)} notes, avg drift {avg_timing_ms:.1f}ms")
+        return result
+
+    except Exception as e:
+        error_msg = f"Error applying Goa groove: {str(e)}"
         logger.error(error_msg)
         return {
             "status": "error",
