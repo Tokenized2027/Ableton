@@ -13,19 +13,22 @@ from typing import Dict, Any, List
 logger = logging.getLogger("FlyinColorsMix")
 
 # Frequency Ownership Chart
-# Based on FREQUENCY_RANGE_OWNERSHIP.md
+# Calibrated from 8-track Goa reference analysis (COMBINED_GOA_DNA.json)
+# Energy distribution: sub_bass 55.3%, bass 25.3%, low_mid 10.2%, mid 4.9%, high_mid 2.5%, high 1.6%
 FREQUENCY_OWNERSHIP = {
     "FC_Sub": {
         "hp_freq": 20,
         "lp_freq": 80,
         "range": "20-80 Hz",
-        "role": "Sub Bass"
+        "role": "Sub Bass",
+        "energy_pct": 55.3              # Dominant band in Goa trance
     },
     "FC_RollingBass": {
         "hp_freq": 80,
-        "lp_freq": 200,
-        "range": "80-200 Hz",
-        "role": "Rolling Bass"
+        "lp_freq": 300,
+        "range": "80-300 Hz",
+        "role": "Rolling Bass",
+        "energy_pct": 25.3              # bass band extends to 300Hz per analysis
     },
     "FC_Kick": {
         "hp_freq": 40,
@@ -37,30 +40,34 @@ FREQUENCY_OWNERSHIP = {
         "hp_freq": 300,
         "lp_freq": 8000,
         "range": "300-8000 Hz",
-        "role": "Pad"
+        "role": "Pad",
+        "energy_pct": 10.2              # low_mid band where pads sit
     },
     "FC_Lead": {
-        "hp_freq": 800,
+        "hp_freq": 1000,
         "lp_freq": None,
-        "range": "800+ Hz",
-        "role": "Lead"
+        "range": "1000+ Hz",
+        "role": "Lead",
+        "energy_pct": 4.9               # mid band (1k-4kHz)
     },
     "FC_Arp": {
         "hp_freq": 1000,
         "lp_freq": None,
         "range": "1000+ Hz",
-        "role": "Arp"
+        "role": "Arp",
+        "energy_pct": 2.5               # high_mid band (4k-8kHz)
     },
     "FC_Hats": {
-        "hp_freq": 3000,
+        "hp_freq": 4000,
         "lp_freq": None,
-        "range": "3000+ Hz",
-        "role": "Hi-hats"
+        "range": "4000+ Hz",
+        "role": "Hi-hats",
+        "energy_pct": 1.6               # high band (8k+)
     },
     "FC_Perc": {
-        "hp_freq": 200,
+        "hp_freq": 300,
         "lp_freq": None,
-        "range": "200+ Hz",
+        "range": "300+ Hz",
         "role": "Percussion"
     }
 }

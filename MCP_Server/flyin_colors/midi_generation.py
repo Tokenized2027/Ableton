@@ -119,7 +119,7 @@ def generate_rolling_bass(
         scale: Scale type
         bars: Clip length in bars
         pattern_type: Rhythm pattern
-        velocity_pattern: Repeating velocity cycle (default: [100, 85, 95, 80])
+        velocity_pattern: 16-position velocity cycle (default: DNA-analyzed Goa pattern)
         chord_progression: Roman numerals (default: ["i"])
         bars_per_chord: Bars before chord changes
         filter_hint: Metadata for filter position ("closed", "medium", "open")
@@ -132,7 +132,9 @@ def generate_rolling_bass(
 
     # Defaults
     if velocity_pattern is None:
-        velocity_pattern = [100, 85, 95, 80]
+        # 16-position velocity cycle from 8-track Goa reference analysis (COMBINED_GOA_DNA.json)
+        # Narrow range (122-125 MIDI) with subtle accents on quarter-note positions
+        velocity_pattern = [123, 124, 122, 125, 123, 123, 123, 123, 123, 124, 123, 122, 123, 124, 122, 122]
     if chord_progression is None:
         chord_progression = ["i"]
 

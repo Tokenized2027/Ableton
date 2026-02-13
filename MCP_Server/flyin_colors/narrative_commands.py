@@ -14,23 +14,26 @@ from typing import Dict, Any
 logger = logging.getLogger("FlyinColorsNarrative")
 
 # Phase parameter definitions
+# Bass filter cutoffs derived from 8-track Goa reference analysis (COMBINED_GOA_DNA.json)
+# Bass filter proxy range: 888 Hz (closed) to 2000 Hz (open)
+# Intro sections avg ~1701 Hz, middle ~1898 Hz, outro ~1878 Hz
 PHASE_PARAMETERS = {
     "horror": {
-        "bass_filter_cutoff": (600, 800),     # Hz - dark, constrained
+        "bass_filter_cutoff": (888, 1200),     # Hz - closed end of reference range, constrained
         "reverb_long_send": 0.1,               # Dry, claustrophobic
         "distortion_send": 0.6,                # High - aggressive texture
         "pad_volume_db": -6.0,                 # Sparse, cold
         "lead_volume_db": -96.0                # Muted - absent hope
     },
     "defiance": {
-        "bass_filter_cutoff": (900, 1200),    # Hz - full range, aggressive
+        "bass_filter_cutoff": (1700, 2000),    # Hz - full open range from reference intro-to-peak
         "reverb_long_send": 0.25,              # Medium - building space
         "distortion_send": 0.3,                # Medium - controlled aggression
         "pad_volume_db": -3.0,                 # Supportive
         "lead_volume_db": 0.0                  # Assertive
     },
     "triumph": {
-        "bass_filter_cutoff": (800, 1000),    # Hz - gentler
+        "bass_filter_cutoff": (1500, 1900),    # Hz - reference middle/outro range, warm but present
         "reverb_long_send": 0.5,               # High - lush, spacious
         "distortion_send": 0.1,                # Low - clean, clear
         "pad_volume_db": 0.0,                  # Rich harmonic bed
@@ -39,7 +42,7 @@ PHASE_PARAMETERS = {
     "transition": {
         # Transition uses interpolation between phases
         # Set by blend logic in apply function
-        "bass_filter_cutoff": (700, 900),
+        "bass_filter_cutoff": (1200, 1700),    # Hz - midpoint of reference filter range
         "reverb_long_send": 0.3,
         "distortion_send": 0.4,
         "pad_volume_db": -4.5,
