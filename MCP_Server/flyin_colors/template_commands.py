@@ -163,3 +163,215 @@ def create_flyin_colors_session(
             "return_tracks_created": sends_created,
             "errors": errors
         }
+
+
+def create_nitzhonot_bass_template(
+    ableton_connection,
+    key: str = "Dm",
+    scale: str = "harmonic_minor",
+    group_name: str = "Bass Group"
+) -> Dict[str, Any]:
+    """
+    Create pre-routed rolling bass + sub bass track pair with sidechain.
+
+    Creates a track group with:
+    - Rolling Bass: Serum/Operator, EQ Eight (HP @ 80Hz, LP @ 200Hz), Compressor (sidechain to kick)
+    - Sub Bass: Operator (sine wave), EQ Eight (HP @ 20Hz, LP @ 80Hz), Compressor (sidechain to kick)
+
+    Parameters:
+        ableton_connection: Active connection to Ableton
+        key: Musical key (e.g., "Dm", "Am")
+        scale: Scale type (default: "harmonic_minor")
+        group_name: Track group name (default: "Bass Group")
+
+    Returns:
+        Dictionary with creation status and stats
+    """
+
+    logger.info(f"Creating Nitzhonot bass template: {key} {scale}, group: {group_name}")
+
+    tracks_created = 0
+    devices_loaded = 0
+    sidechain_configured = False
+    errors = []
+
+    try:
+        # Step 1: Create Rolling Bass track
+        logger.info("Creating Rolling Bass track")
+        try:
+            rolling_bass_result = ableton_connection.send_command("create_midi_track", {"index": -1})
+            rolling_bass_index = rolling_bass_result.get("track_index", -1)
+
+            if rolling_bass_index >= 0:
+                # Set track name
+                ableton_connection.send_command("set_track_name", {
+                    "track_index": rolling_bass_index,
+                    "name": "FC_RollingBass"
+                })
+                tracks_created += 1
+                logger.info(f"Created Rolling Bass track at index {rolling_bass_index}")
+
+                # Try to load Serum (or fallback to Operator)
+                try:
+                    # Attempt to load Serum
+                    # Note: URI format may vary depending on Ableton version and plugin installation
+                    # This is a placeholder - actual URI would need to be discovered
+                    ableton_connection.send_command("load_browser_item", {
+                        "track_index": rolling_bass_index,
+                        "item_uri": "query:Instruments#Serum"
+                    })
+                    devices_loaded += 1
+                    logger.info("Loaded Serum on Rolling Bass")
+                except Exception as serum_error:
+                    logger.warning(f"Could not load Serum: {serum_error}")
+                    # Fallback to Operator
+                    try:
+                        ableton_connection.send_command("load_browser_item", {
+                            "track_index": rolling_bass_index,
+                            "item_uri": "query:Instruments#Operator"
+                        })
+                        devices_loaded += 1
+                        logger.info("Loaded Operator (Serum fallback) on Rolling Bass")
+                    except Exception as operator_error:
+                        logger.warning(f"Could not load Operator: {operator_error}")
+                        errors.append("Could not load synth on Rolling Bass - add manually")
+
+                # Try to add EQ Eight with HP @ 80Hz, LP @ 200Hz
+                try:
+                    ableton_connection.send_command("load_browser_item", {
+                        "track_index": rolling_bass_index,
+                        "item_uri": "query:Audio Effects#EQ Eight"
+                    })
+                    devices_loaded += 1
+                    logger.info("Loaded EQ Eight on Rolling Bass")
+                    # Note: Setting EQ parameters would require device parameter control
+                    # This may need to be done manually or via additional MCP commands
+                except Exception as eq_error:
+                    logger.warning(f"Could not load EQ Eight: {eq_error}")
+                    errors.append("Could not load EQ Eight on Rolling Bass - add manually")
+
+                # Try to add Compressor with sidechain
+                try:
+                    ableton_connection.send_command("load_browser_item", {
+                        "track_index": rolling_bass_index,
+                        "item_uri": "query:Audio Effects#Compressor"
+                    })
+                    devices_loaded += 1
+                    logger.info("Loaded Compressor on Rolling Bass")
+                    # Note: Sidechain routing requires additional commands not in base MCP
+                    errors.append("Sidechain routing must be configured manually")
+                except Exception as comp_error:
+                    logger.warning(f"Could not load Compressor: {comp_error}")
+                    errors.append("Could not load Compressor on Rolling Bass - add manually")
+
+        except Exception as rolling_error:
+            error_msg = f"Error creating Rolling Bass track: {rolling_error}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+
+        # Step 2: Create Sub Bass track
+        logger.info("Creating Sub Bass track")
+        try:
+            sub_bass_result = ableton_connection.send_command("create_midi_track", {"index": -1})
+            sub_bass_index = sub_bass_result.get("track_index", -1)
+
+            if sub_bass_index >= 0:
+                # Set track name
+                ableton_connection.send_command("set_track_name", {
+                    "track_index": sub_bass_index,
+                    "name": "FC_SubBass"
+                })
+                tracks_created += 1
+                logger.info(f"Created Sub Bass track at index {sub_bass_index}")
+
+                # Load Operator (sine wave for sub)
+                try:
+                    ableton_connection.send_command("load_browser_item", {
+                        "track_index": sub_bass_index,
+                        "item_uri": "query:Instruments#Operator"
+                    })
+                    devices_loaded += 1
+                    logger.info("Loaded Operator on Sub Bass")
+                    # Note: Configuring Operator for sine wave requires parameter control
+                    errors.append("Configure Operator for sine wave manually")
+                except Exception as operator_error:
+                    logger.warning(f"Could not load Operator: {operator_error}")
+                    errors.append("Could not load Operator on Sub Bass - add manually")
+
+                # Try to add EQ Eight with HP @ 20Hz, LP @ 80Hz
+                try:
+                    ableton_connection.send_command("load_browser_item", {
+                        "track_index": sub_bass_index,
+                        "item_uri": "query:Audio Effects#EQ Eight"
+                    })
+                    devices_loaded += 1
+                    logger.info("Loaded EQ Eight on Sub Bass")
+                    # Note: Setting EQ parameters would require device parameter control
+                except Exception as eq_error:
+                    logger.warning(f"Could not load EQ Eight: {eq_error}")
+                    errors.append("Could not load EQ Eight on Sub Bass - add manually")
+
+                # Try to add Compressor with sidechain (faster attack)
+                try:
+                    ableton_connection.send_command("load_browser_item", {
+                        "track_index": sub_bass_index,
+                        "item_uri": "query:Audio Effects#Compressor"
+                    })
+                    devices_loaded += 1
+                    logger.info("Loaded Compressor on Sub Bass")
+                    errors.append("Sidechain routing and faster attack must be configured manually")
+                except Exception as comp_error:
+                    logger.warning(f"Could not load Compressor: {comp_error}")
+                    errors.append("Could not load Compressor on Sub Bass - add manually")
+
+        except Exception as sub_error:
+            error_msg = f"Error creating Sub Bass track: {sub_error}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+
+        # Step 3: Try to create track group
+        # Note: Track grouping may not be supported in base ahujasid/ableton-mcp
+        # We'll attempt it, but won't fail if it doesn't work
+        try:
+            logger.info(f"Attempting to create track group: {group_name}")
+            ableton_connection.send_command("create_track_group", {
+                "name": group_name,
+                "track_indices": [rolling_bass_index, sub_bass_index]
+            })
+            logger.info(f"Created track group: {group_name}")
+        except Exception as group_error:
+            logger.warning(f"Could not create track group: {group_error}")
+            errors.append(f"Track grouping not supported - group tracks manually as '{group_name}'")
+
+        # Prepare response
+        response = {
+            "status": "success",
+            "group_created": tracks_created == 2,  # Both tracks created
+            "tracks_in_group": tracks_created,
+            "sidechain_configured": sidechain_configured,
+            "devices_loaded": devices_loaded,
+            "key": key,
+            "scale": scale,
+            "message": f"Nitzhonot bass template created: {tracks_created} tracks, {devices_loaded} devices loaded",
+            "warnings": errors
+        }
+
+        if tracks_created < 2:
+            response["status"] = "partial"
+            response["message"] = f"Only {tracks_created}/2 tracks created - check errors"
+
+        logger.info(f"Nitzhonot bass template creation complete: {response['message']}")
+        return response
+
+    except Exception as e:
+        error_msg = f"Fatal error creating Nitzhonot bass template: {str(e)}"
+        logger.error(error_msg)
+        return {
+            "status": "error",
+            "message": error_msg,
+            "group_created": False,
+            "tracks_in_group": tracks_created,
+            "sidechain_configured": False,
+            "devices_loaded": devices_loaded,
+            "errors": errors
+        }

@@ -18,5 +18,12 @@ __version__ = "0.1.0"
 __author__ = "Avi + Claude"
 
 from .template_commands import *
+from .midi_generation import *
+from .session_commands import *
 
-__all__ = ["create_flyin_colors_session"]
+__all__ = [
+    "create_flyin_colors_session",
+    "generate_rolling_bass",
+    "set_section_markers",
+    "export_session_state"
+]
